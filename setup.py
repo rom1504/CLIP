@@ -4,7 +4,7 @@ import pkg_resources
 from setuptools import setup, find_packages
 
 setup(
-    name="clip",
+    name="clip-anytorch",
     py_modules=["clip"],
     version="1.0",
     description="",
