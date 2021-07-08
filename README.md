@@ -12,6 +12,8 @@ This repo is a fork maintaining a PYPI package for clip. Changes from the main r
 You will need to disable JIT by doing `model, preprocess = clip.load("ViT-B/32", device=device, jit=False)` if not using torch 1.7.1.
 Run `pip install clip-anytorch` to install this package.
 
+One benefit of not depending on an old torch version is installing clip on colab is super fast, try [this colab](https://colab.research.google.com/drive/1q-YgGtk5IeU3-uTvfKF63vI8ntU9k3Cw#scrollTo=ctt1dsV18smF) to see it for yourself.
+
 ## Approach
 
 ![CLIP](CLIP.png)
