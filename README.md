@@ -5,6 +5,12 @@
 CLIP (Contrastive Language-Image Pre-Training) is a neural network trained on a variety of (image, text) pairs. It can be instructed in natural language to predict the most relevant text snippet, given an image, without directly optimizing for the task, similarly to the zero-shot capabilities of GPT-2 and 3. We found CLIP matches the performance of the original ResNet50 on ImageNet “zero-shot” without using any of the original 1.28M labeled examples, overcoming several major challenges in computer vision.
 
 
+This repo is a fork maintaining a PYPI package for clip. Changes from the main repo:
+* remove the strict torch dependency
+* add [truncate_text](https://github.com/openai/CLIP/pull/126) option to tokenize to be able to handle longer sequences
+
+You will need to disable JIT by doing `model, preprocess = clip.load("ViT-B/32", device=device, jit=False)` if not using torch 1.7.1.
+Run `pip install clip-anytorch` to install this package.
 
 ## Approach
 
@@ -12,7 +18,13 @@ CLIP (Contrastive Language-Image Pre-Training) is a neural network trained on a 
 
 
 
-## Usage
+## Installation
+
+## With pip
+
+`pip install clip-anytorch`. Yes that's it!
+
+## With conda
 
 First, [install PyTorch 1.7.1](https://pytorch.org/get-started/locally/) and torchvision, as well as small additional dependencies, and then install this repo as a Python package. On a CUDA GPU machine, the following will do the trick:
 
@@ -23,6 +35,8 @@ $ pip install git+https://github.com/openai/CLIP.git
 ```
 
 Replace `cudatoolkit=11.0` above with the appropriate CUDA version on your machine or `cpuonly` when installing on a machine without a GPU.
+
+## Usage
 
 ```python
 import torch
