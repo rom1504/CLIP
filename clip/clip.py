@@ -12,6 +12,17 @@ from tqdm import tqdm
 from .model import build_model
 from .simple_tokenizer import SimpleTokenizer as _Tokenizer
 
+try:
+    from torchvision.transforms import InterpolationMode
+    BICUBIC = InterpolationMode.BICUBIC
+except ImportError:
+    BICUBIC = Image.BICUBIC
+
+
+if torch.__version__.split(".") < ["1", "7", "1"]:
+    warnings.warn("PyTorch version 1.7.1 or higher is recommended")
+
+
 __all__ = ["available_models", "load", "tokenize"]
 _tokenizer = _Tokenizer()
 
@@ -19,7 +30,9 @@ _MODELS = {
     "RN50": "https://openaipublic.azureedge.net/clip/models/afeb0e10f9e5a86da6080e35cf09123aca3b358a0c3e3b6c78a7b63bc04b6762/RN50.pt",
     "RN101": "https://openaipublic.azureedge.net/clip/models/8fa8567bab74a42d41c5915025a8e4538c3bdbe8804a470a72f30b0d94fab599/RN101.pt",
     "RN50x4": "https://openaipublic.azureedge.net/clip/models/7e526bd135e493cef0776de27d5f42653e6b4c8bf9e0f653bb11773263205fdd/RN50x4.pt",
+    "RN50x16": "https://openaipublic.azureedge.net/clip/models/52378b407f34354e150460fe41077663dd5b39c54cd0bfd2b27167a4a06ec9aa/RN50x16.pt",
     "ViT-B/32": "https://openaipublic.azureedge.net/clip/models/40d365715913c9da98579312b702a82c18be219cc2a73407c4526f58eba950af/ViT-B-32.pt",
+    "ViT-B/16": "https://openaipublic.azureedge.net/clip/models/5806e77cd80f8b59890b7e101eabd078d9fb84e6937f9e85e4ecb61988df416f/ViT-B-16.pt",
 }
 
 
@@ -57,7 +70,7 @@ def _download(url: str, root: str = os.path.expanduser("~/.cache/clip")):
 
 def _transform(n_px):
     return Compose([
-        Resize(n_px, interpolation=Image.BICUBIC),
+        Resize(n_px, interpolation=BICUBIC),
         CenterCrop(n_px),
         lambda image: image.convert("RGB"),
         ToTensor(),
@@ -70,7 +83,7 @@ def available_models() -> List[str]:
     return list(_MODELS.keys())
 
 
-def load(name: str, device: Union[str, torch.device] = "cuda" if torch.cuda.is_available() else "cpu", jit=True):
+def load(name: str, device: Union[str, torch.device] = "cuda" if torch.cuda.is_available() else "cpu", jit=False):
     """Load a CLIP model
 
     Parameters
@@ -82,7 +95,7 @@ def load(name: str, device: Union[str, torch.device] = "cuda" if torch.cuda.is_a
         The device to put the loaded model
 
     jit : bool
-        Whether to load the optimized JIT model (default) or more hackable non-JIT model.
+        Whether to load the optimized JIT model or more hackable non-JIT model (default).
 
     Returns
     -------
@@ -121,7 +134,11 @@ def load(name: str, device: Union[str, torch.device] = "cuda" if torch.cuda.is_a
     device_node = [n for n in device_holder.graph.findAllNodes("prim::Constant") if "Device" in repr(n)][-1]
 
     def patch_device(module):
-        graphs = [module.graph] if hasattr(module, "graph") else []
+        try:
+            graphs = [module.graph] if hasattr(module, "graph") else []
+        except RuntimeError:
+            graphs = []
+
         if hasattr(module, "forward1"):
             graphs.append(module.forward1.graph)
 
@@ -141,7 +158,11 @@ def load(name: str, device: Union[str, torch.device] = "cuda" if torch.cuda.is_a
         float_node = float_input.node()
 
         def patch_float(module):
-            graphs = [module.graph] if hasattr(module, "graph") else []
+            try:
+                graphs = [module.graph] if hasattr(module, "graph") else []
+            except RuntimeError:
+                graphs = []
+
             if hasattr(module, "forward1"):
                 graphs.append(module.forward1.graph)
 
@@ -161,7 +182,7 @@ def load(name: str, device: Union[str, torch.device] = "cuda" if torch.cuda.is_a
     return model, _transform(model.input_resolution.item())
 
 
-def tokenize(texts: Union[str, List[str]], context_length: int = 77, truncate_text = False) -> torch.LongTensor:
+def tokenize(texts: Union[str, List[str]], context_length: int = 77, truncate_text: bool = False) -> torch.LongTensor:
     """
     Returns the tokenized representation of given input string(s)
 
@@ -172,6 +193,9 @@ def tokenize(texts: Union[str, List[str]], context_length: int = 77, truncate_te
 
     context_length : int
         The context length to use; all CLIP models use 77 as the context length
+
+    truncate: bool
+        Whether to truncate the text in case its encoding is longer than the context length
 
     Returns
     -------
@@ -189,6 +213,7 @@ def tokenize(texts: Union[str, List[str]], context_length: int = 77, truncate_te
         if len(tokens) > context_length:
             if truncate_text:
                 tokens = tokens[:context_length]
+                tokens[-1] = eot_token
             else:
                 raise RuntimeError(f"Input {texts[i]} is too long for context length {context_length}")
         result[i, :len(tokens)] = torch.tensor(tokens)
