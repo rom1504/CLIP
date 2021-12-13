@@ -83,7 +83,7 @@ def available_models() -> List[str]:
     return list(_MODELS.keys())
 
 
-def load(name: str, device: Union[str, torch.device] = "cuda" if torch.cuda.is_available() else "cpu", jit=False):
+def load(name: str, device: Union[str, torch.device] = None, jit=False):
     """Load a CLIP model
 
     Parameters
@@ -105,6 +105,8 @@ def load(name: str, device: Union[str, torch.device] = "cuda" if torch.cuda.is_a
     preprocess : Callable[[PIL.Image], torch.Tensor]
         A torchvision transform that converts a PIL image into a tensor that the returned model can take as its input
     """
+    if device is None:
+        device = "cuda" if torch.cuda.is_available() else "cpu"
     if name in _MODELS:
         model_path = _download(_MODELS[name])
     elif os.path.isfile(name):
