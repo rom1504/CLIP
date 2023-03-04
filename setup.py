@@ -4,6 +4,7 @@ import pkg_resources
 from setuptools import setup, find_packages
 from pathlib import Path
 
+
 if __name__ == "__main__":
 
     # Read description from README
