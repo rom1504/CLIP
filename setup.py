@@ -18,7 +18,7 @@ if __name__ == "__main__":
         description=long_description.split("\n")[0],
         url="https://github.com/rom1504/CLIP",
         py_modules=["clip"],
-        version="2.5.2",
+        version="2.6.0",
         author="OpenAI",
         packages=find_packages(exclude=["tests*"]),
         install_requires=[
